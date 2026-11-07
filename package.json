@@ -1,0 +1,11 @@
+{
+  "name": "torneos",
+  "version": "1.0.0",
+  "description": "Organiza torneos por eliminación directa: equipos, sorteo, llaves y campeón. Los datos se guardan en el navegador.",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "python3 -m http.server 8080"
+  },
+  "license": "MIT"
+}
