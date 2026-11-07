@@ -19,15 +19,17 @@ No necesita servidor, base de datos ni instalación: **todo se guarda en el nave
 
 **Opción rápida:** abre `index.html` con doble clic en el navegador.
 
-**Con un servidor local** (activa también el modo sin conexión):
+**Con el servidor incluido** (activa también el modo sin conexión). Solo necesita Node.js 18 o superior, sin dependencias:
 
 ```bash
-python3 -m http.server 8080
+npm start
 ```
 
-Y abre <http://localhost:8080>.
+Y abre <http://localhost:8080>. Para usar otro puerto: `PORT=3000 npm start`.
 
-**Publicarla en GitHub Pages:** en el repositorio, ve a *Settings → Pages*, elige la rama y la carpeta raíz (`/`). La app quedará disponible en `https://<usuario>.github.io/torneos-/`.
+**Publicarla en Railway:** conecta el repositorio y Railway ejecuta `npm start` solo. El servidor escucha en el puerto de la variable `PORT` (o en el 8080 si no existe), así que el dominio público debe apuntar a ese mismo puerto (8080 por defecto). No hace falta configurar nada más.
+
+**Publicarla en GitHub Pages:** en el repositorio, ve a *Settings → Pages*, elige la rama `main` y la carpeta raíz (`/`). La app quedará disponible en `https://<usuario>.github.io/torneos-/`.
 
 ## Dónde se guardan los datos
 
@@ -45,6 +47,7 @@ index.html            Estructura de la página
 css/styles.css        Estilos (tema claro y oscuro, diseño adaptable)
 js/tournament.js      Lógica del torneo sin interfaz: sorteo, llaves, resultados, validaciones
 js/app.js             Interfaz, almacenamiento en localStorage y diálogos
+server.js             Servidor estático en Node para `npm start` (Railway u otro hosting)
 sw.js                 Service worker para el modo sin conexión
 manifest.webmanifest  Permite instalarla como app en el teléfono
 tests/                Pruebas de la lógica del torneo
@@ -52,7 +55,7 @@ tests/                Pruebas de la lógica del torneo
 
 ## Pruebas
 
-Requieren Node.js 18 o superior; no hay dependencias que instalar.
+Cubren la lógica del torneo y el servidor (tipos de archivo, archivos privados, rutas maliciosas, caché). Requieren Node.js 18 o superior; no hay dependencias que instalar.
 
 ```bash
 npm test
