@@ -1,0 +1,14 @@
+{
+  "name": "Torneos",
+  "short_name": "Torneos",
+  "description": "Crea equipos, haz el sorteo y avanza por las etapas hasta coronar al campeón.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111A2C",
+  "theme_color": "#111A2C",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
