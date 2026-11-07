@@ -1368,9 +1368,11 @@
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {
-        // Sin modo sin conexión; la app funciona igual.
-      });
+      // En marcos aislados (iframes) el navegador puede negar el acceso;
+      // en ese caso no hay modo sin conexión, pero la app funciona igual.
+      try {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      } catch (e) { /* sin service worker */ }
     });
   }
 
