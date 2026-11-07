@@ -27,7 +27,7 @@ npm start
 
 Y abre <http://localhost:8080>. Para usar otro puerto: `PORT=3000 npm start`.
 
-**Publicarla en Railway:** conecta el repositorio y Railway ejecuta `npm start` solo. El servidor escucha en el puerto de la variable `PORT` (o en el 8080 si no existe), así que el dominio público debe apuntar a ese mismo puerto (8080 por defecto). No hace falta configurar nada más.
+**Publicarla en Railway:** conecta el repositorio y listo. `railway.json` le indica a Railway que arranque `node server.js` directamente (sin pasar por npm), para que al redesplegar el servidor reciba la señal de parada y cierre ordenadamente. El servidor escucha en el puerto de la variable `PORT` (o en el 8080 si no existe), así que el dominio público debe apuntar a ese mismo puerto (8080 por defecto). Railway usa la versión LTS vigente de Node; no se fija ninguna versión en `package.json` a propósito, porque Railpack reduce un rango como `>=18` a exactamente Node 18.
 
 **Publicarla en GitHub Pages:** en el repositorio, ve a *Settings → Pages*, elige la rama `main` y la carpeta raíz (`/`). La app quedará disponible en `https://<usuario>.github.io/torneos-/`.
 
@@ -48,6 +48,7 @@ css/styles.css        Estilos (tema claro y oscuro, diseño adaptable)
 js/tournament.js      Lógica del torneo sin interfaz: sorteo, llaves, resultados, validaciones
 js/app.js             Interfaz, almacenamiento en localStorage y diálogos
 server.js             Servidor estático en Node para `npm start` (Railway u otro hosting)
+railway.json          Comando de arranque para Railway
 sw.js                 Service worker para el modo sin conexión
 manifest.webmanifest  Permite instalarla como app en el teléfono
 tests/                Pruebas de la lógica del torneo

@@ -75,6 +75,8 @@ function resolvePublicFile(rawUrl) {
   }
   if (pathname.includes('\0')) return { error: 400 };
   if (pathname === '/' || pathname === '/index.html') return { file: path.join(ROOT, 'index.html') };
+  // "/index.html/" devolvería la página con sus recursos relativos rotos: mejor un 404.
+  if (pathname.endsWith('/')) return { error: 404 };
 
   const resolved = path.resolve(ROOT, '.' + path.posix.normalize('/' + pathname));
   const rel = path.relative(ROOT, resolved);
@@ -123,21 +125,25 @@ function handle(req, res) {
       return;
     }
 
-    headers['Content-Length'] = stat.size;
     if (req.method === 'HEAD') {
+      headers['Content-Length'] = stat.size;
       res.writeHead(200, headers);
       res.end();
       return;
     }
 
-    const stream = fs.createReadStream(target.file);
-    stream.on('open', () => {
+    // Los archivos de la app son pequeños (menos de 64 KB), así que se leen enteros.
+    // readFile siempre cierra el archivo, aunque el visitante haya cancelado la petición;
+    // con un stream conectado a una respuesta ya cerrada, el archivo quedaría abierto para siempre.
+    fs.readFile(target.file, (readErr, data) => {
+      if (res.destroyed) return;
+      if (readErr) {
+        send(res, 500, 'Error al leer el archivo');
+        return;
+      }
+      headers['Content-Length'] = data.length;
       res.writeHead(200, headers);
-      stream.pipe(res);
-    });
-    stream.on('error', () => {
-      if (!res.headersSent) send(res, 500, 'Error al leer el archivo');
-      else res.destroy();
+      res.end(data);
     });
   });
 }
@@ -146,10 +152,19 @@ function createServer() {
   return http.createServer(handle);
 }
 
+/** PORT vacío o solo con espacios → 8080; solo se aceptan dígitos (nada de "1e3" o "0x1F90"). */
+function parsePort(raw) {
+  const value = String(raw == null ? '' : raw).trim();
+  if (value === '') return DEFAULT_PORT;
+  if (!/^\d+$/.test(value)) return NaN;
+  const port = Number(value);
+  return port <= 65535 ? port : NaN;
+}
+
 function start() {
   const raw = process.env.PORT;
-  const port = raw === undefined || raw === '' ? DEFAULT_PORT : Number(raw);
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+  const port = parsePort(raw);
+  if (Number.isNaN(port)) {
     console.error('PORT inválido: "' + raw + '". Usa un número entre 0 y 65535.');
     process.exit(1);
   }
@@ -167,6 +182,7 @@ function start() {
   });
 
   // Railway y Docker detienen el contenedor con SIGTERM: cerrar ordenadamente.
+  // (Con `npm start` la señal le llega a npm y no a node; por eso railway.json arranca `node server.js`.)
   const shutdown = (signal) => {
     console.log('Recibido ' + signal + ', cerrando el servidor…');
     server.close(() => process.exit(0));
@@ -178,4 +194,4 @@ function start() {
 
 if (require.main === module) start();
 
-module.exports = { createServer, resolvePublicFile };
+module.exports = { createServer, resolvePublicFile, parsePort };

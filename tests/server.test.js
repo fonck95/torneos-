@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
-const { createServer } = require('../server.js');
+const net = require('node:net');
+const fs = require('node:fs');
+const { createServer, parsePort } = require('../server.js');
 
 let server;
 let port;
@@ -87,6 +89,12 @@ test('bloquea intentos de salir de la carpeta', async () => {
     '/css/..%5cserver.js',
     '//etc/passwd',
     '/js/.hidden.js',
+    '/index.html/',
+    '/index.html%2F',
+    '/index.html//',
+    '/css/styles.css/',
+    '/sw.js/',
+    '/js/app.js/',
   ]) {
     const r = await request(p);
     assert.ok(r.status === 404 || r.status === 400, p + ' → ' + r.status);
@@ -159,4 +167,53 @@ test('un PORT inválido detiene el arranque con un mensaje claro', async () => {
   const r = await runServer({ PORT: 'abc' });
   assert.equal(r.code, 1);
   assert.match(r.out, /PORT inválido/);
+});
+
+test('parsePort: número válido, vacío o con espacios usa 8080, lo demás es inválido', () => {
+  assert.equal(parsePort(undefined), 8080);
+  assert.equal(parsePort(''), 8080);
+  assert.equal(parsePort('   '), 8080);
+  assert.equal(parsePort('\t'), 8080);
+  assert.equal(parsePort(' 3000 '), 3000);
+  assert.equal(parsePort('0'), 0);
+  assert.equal(parsePort('65535'), 65535);
+  for (const bad of ['abc', '-1', '70000', '1e3', '0x1F90', '80.5', '8080abc']) {
+    assert.ok(Number.isNaN(parsePort(bad)), bad);
+  }
+});
+
+// Linux expone los descriptores abiertos del proceso en /proc/self/fd.
+const canCountFds = fs.existsSync('/proc/self/fd');
+
+test('no deja archivos abiertos si el cliente cancela la petición', { skip: !canCountFds && 'requiere /proc/self/fd' }, async () => {
+  const countFds = () => fs.readdirSync('/proc/self/fd').length;
+  const settle = () => new Promise((r) => setTimeout(r, 300));
+  await settle();
+  const before = countFds();
+  const N = 60;
+  const paths = ['/', '/js/app.js', '/css/styles.css'];
+  await Promise.all(Array.from({ length: N }, (_, i) => new Promise((resolve) => {
+    const socket = net.connect(port, '127.0.0.1', () => {
+      socket.write('GET ' + paths[i % paths.length] + ' HTTP/1.1\r\nHost: x\r\n\r\n');
+      // Cancelar justo después de pedir: entre stat y open del archivo.
+      setImmediate(() => { socket.destroy(); resolve(); });
+    });
+    socket.on('error', resolve);
+  })));
+  await settle();
+  const after = countFds();
+  assert.ok(after - before < 5, 'quedaron ' + (after - before) + ' descriptores abiertos tras ' + N + ' peticiones canceladas');
+  // El servidor sigue respondiendo con normalidad.
+  assert.equal((await request('/js/app.js')).status, 200);
+});
+
+test('railway.json arranca node directamente para que reciba SIGTERM', () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'railway.json'), 'utf8'));
+  assert.equal(cfg.deploy.startCommand, 'node server.js');
+});
+
+test('package.json no fija una versión de Node que Railpack reduciría a una sin soporte', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  assert.equal(pkg.engines, undefined);
+  assert.equal(pkg.scripts.start, 'node server.js');
 });
